@@ -1,7 +1,7 @@
 import json
 import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
 # Файл для хранения данных
 DATA_FILE = 'bank_data.json'
@@ -44,22 +44,22 @@ def update_personal_balances():
     save_data(data)
 
 # Команда /start
-def start(update, context):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("💰 Общий банк", callback_data='common_bank')],
         [InlineKeyboardButton("👤 Вова", callback_data='vova')],
         [InlineKeyboardButton("👤 Коля", callback_data='kolya')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text(
+    await update.message.reply_text(
         "🏦 Добро пожаловать в банковскую систему!\nВыберите раздел:",
         reply_markup=reply_markup
     )
 
 # Обработка нажатий
-def button_callback(update, context):
+async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    query.answer()
+    await query.answer()
     
     context.user_data['last_action'] = query.data
     
@@ -70,7 +70,7 @@ def button_callback(update, context):
             [InlineKeyboardButton("🔙 Назад", callback_data='back_to_menu')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        query.edit_message_text(
+        await query.edit_message_text(
             f"💰 Общий банк\nБаланс: {data['common_bank']} руб.\n\n"
             f"Выберите действие:",
             reply_markup=reply_markup
@@ -78,7 +78,7 @@ def button_callback(update, context):
     
     elif query.data == 'add_money':
         context.user_data['transaction_type'] = 'add'
-        query.edit_message_text(
+        await query.edit_message_text(
             f"💰 Общий банк\nБаланс: {data['common_bank']} руб.\n\n"
             f"✏️ Введите сумму, которую хотите добавить:\n"
             f"(например: 1000)",
@@ -89,7 +89,7 @@ def button_callback(update, context):
     
     elif query.data == 'subtract_money':
         context.user_data['transaction_type'] = 'subtract'
-        query.edit_message_text(
+        await query.edit_message_text(
             f"💰 Общий банк\nБаланс: {data['common_bank']} руб.\n\n"
             f"✏️ Введите сумму, которую хотите вычесть:\n"
             f"(например: 500)",
@@ -99,7 +99,7 @@ def button_callback(update, context):
         )
     
     elif query.data == 'vova':
-        query.edit_message_text(
+        await query.edit_message_text(
             f"👤 Вова\nБаланс: {data['vova']} руб.\n\n"
             f"Баланс корректируется автоматически.",
             reply_markup=InlineKeyboardMarkup([
@@ -108,7 +108,7 @@ def button_callback(update, context):
         )
     
     elif query.data == 'kolya':
-        query.edit_message_text(
+        await query.edit_message_text(
             f"👤 Коля\nБаланс: {data['kolya']} руб.\n\n"
             f"Баланс корректируется автоматически.",
             reply_markup=InlineKeyboardMarkup([
@@ -123,19 +123,19 @@ def button_callback(update, context):
             [InlineKeyboardButton("👤 Коля", callback_data='kolya')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        query.edit_message_text(
+        await query.edit_message_text(
             "🏦 Банковская система\nВыберите раздел:",
             reply_markup=reply_markup
         )
 
 # Обработчик текстовых сообщений
-def handle_amount_input(update, context):
+async def handle_amount_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     global data
     text = update.message.text.strip()
     
     transaction_type = context.user_data.get('transaction_type')
     if not transaction_type:
-        update.message.reply_text(
+        await update.message.reply_text(
             "❌ Сначала выберите действие в разделе 'Общий банк'."
         )
         return
@@ -143,7 +143,7 @@ def handle_amount_input(update, context):
     try:
         amount = int(text)
         if amount <= 0:
-            update.message.reply_text("❌ Сумма должна быть положительным числом!")
+            await update.message.reply_text("❌ Сумма должна быть положительным числом!")
             return
         
         if transaction_type == 'add':
@@ -166,7 +166,7 @@ def handle_amount_input(update, context):
         if data['common_bank'] < 0:
             warning = f"\n⚠️ ВНИМАНИЕ: Общий банк в минусе на {abs(data['common_bank'])} руб."
         
-        update.message.reply_text(
+        await update.message.reply_text(
             f"✅ {action} {amount} руб.\n\n"
             f"📊 Текущие балансы:\n"
             f"💰 Общий банк: {data['common_bank']} руб.\n"
@@ -177,30 +177,28 @@ def handle_amount_input(update, context):
         )
         
     except ValueError:
-        update.message.reply_text(
+        await update.message.reply_text(
             "❌ Введите корректное число!\nПример: 1000"
         )
 
 # Обработчик неизвестных команд
-def handle_unknown(update, context):
-    update.message.reply_text(
+async def handle_unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
         "❌ Неизвестная команда.\nИспользуйте /start"
     )
 
 def main():
     token = "8814586295:AAGND5Un2doDdOFvISKgg2M_3A744dKHbhc"
     
-    updater = Updater(token, use_context=True)
-    dp = updater.dispatcher
+    application = Application.builder().token(token).build()
     
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CallbackQueryHandler(button_callback))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_amount_input))
-    dp.add_handler(MessageHandler(Filters.command, handle_unknown))
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button_callback))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_amount_input))
+    application.add_handler(MessageHandler(filters.COMMAND, handle_unknown))
     
     print("Бот запущен...")
-    updater.start_polling()
-    updater.idle()
+    application.run_polling()
 
 if __name__ == "__main__":
     main()
