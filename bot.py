@@ -1,6 +1,5 @@
 import json
 import os
-import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
@@ -188,8 +187,7 @@ async def handle_unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "❌ Неизвестная команда.\nИспользуйте /start"
     )
 
-async def main():
-    # Токен бота
+def main():
     token = "8814586295:AAGND5Un2doDdOFvISKgg2M_3A744dKHbhc"
     
     application = Application.builder().token(token).build()
@@ -200,7 +198,7 @@ async def main():
     application.add_handler(MessageHandler(filters.COMMAND, handle_unknown))
     
     print("Бот запущен...")
-    await application.run_polling()
+    application.run_polling()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
