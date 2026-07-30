@@ -188,11 +188,9 @@ async def handle_unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "❌ Неизвестная команда.\nИспользуйте /start"
     )
 
-def main():
-    token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    if not token:
-        print("Ошибка: TELEGRAM_BOT_TOKEN не найден!")
-        return
+async def main():
+    # Токен бота
+    token = "8814586295:AAGND5Un2doDdOFvISKgg2M_3A744dKHbhc"
     
     application = Application.builder().token(token).build()
     
@@ -202,7 +200,7 @@ def main():
     application.add_handler(MessageHandler(filters.COMMAND, handle_unknown))
     
     print("Бот запущен...")
-    application.run_polling()
+    await application.run_polling()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
